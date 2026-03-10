@@ -1,4 +1,4 @@
-from ast import For, If, NodeVisitor, While, parse, literal_eval
+from ast import NodeVisitor, parse, literal_eval
 from typing import Optional, Any, List, Union, Callable
 from subprocess import run, CalledProcessError
 from os.path import exists
@@ -34,7 +34,7 @@ class Checker(NodeVisitor):
         self._if = False
 
         self._visit_schema = {
-            'while': (self.visit_While, self._while),
+            'while': (self.visit_While, '_while'),
             'for': (self.visit_For, self._for),
             'if': (self.visit_If, self._if),
         }
@@ -96,6 +96,40 @@ class Checker(NodeVisitor):
 
         except CalledProcessError as e:
             logger.error(f'Code failed with exit code {e.returncode}. Error: {e.stderr}')
+
+        except Exception as e:
+            logger.error(f'{e.__class__.__name__}: {str(e)}')
+
+        return None
+    
+    def as_import(self, path_to_file: str, return_values: List[Any]) -> Optional[bool]:
+        response = False
+
+        try:
+            self._validate_path_to_file(path_to_file)
+            
+            namespace = {}
+
+            with open(path_to_file, mode='r') as f:
+                exec(f.read(), namespace)
+
+            for obj_name, obj in namespace.items():
+                if not callable(obj):
+                    continue
+                
+                return_value = obj()
+                if return_value in return_values:
+                    response = True 
+                    break
+            
+            namespace.clear()
+
+            logger.debug(f'Solution was running through import')
+            
+            return response
+        
+        except FileNotFoundError as e:
+            logger.error(f'FileNotFoundError: {str(e)}')
 
         except Exception as e:
             logger.error(f'{e.__class__.__name__}: {str(e)}')
@@ -187,21 +221,20 @@ class Checker(NodeVisitor):
             if not schema or len(schema) != 2:
                 continue
 
-            visit, *_ = schema
+            visit, condition = schema
             visit(node)
-            if self._visit_schema[tag][1]:
-                response = not response
+            response = self.__dict__.get(condition, False)
 
         return response
 
-    def visit_While(self, node: While) -> None:
+    def visit_While(self, node: Any) -> None:
         self._while = True
         self.generic_visit(node)
 
-    def visit_For(self, node: For) -> Any:
+    def visit_For(self, node: Any) -> Any:
         self._for = True 
         self.generic_visit(node)
 
-    def visit_If(self, node: If):
+    def visit_If(self, node: Any):
         self._if = True 
         self.generic_visit(node)

@@ -528,8 +528,12 @@ class SolutionSerializer(BaseSerializer):
             if isinstance(result, str):
                 raise Exception(result)
             
-            if (result := checker.run_process(filename, return_values)) is None:
-                result = checker.send_to_helper(filename, return_values, task_description)
+            checker_args = filename, return_values,
+            if (result := checker.run_process(*checker_args)) is None:
+                result = checker.as_import(*checker_args)
+            
+            if result is None:
+                result = checker.send_to_helper(*checker_args, task_description)
 
             if isinstance(result, bool) and result == False:
                 mark -= 0.5

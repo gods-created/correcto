@@ -52,7 +52,7 @@ async def api_page(request: Request):
 
     tenant_error_response = HTMLResponse(
         content=open('./templates/tenantError.html', mode='r').read(),
-        status_code=400
+        status_code=302
     )
 
     tenant = request.state.tenant if hasattr(request.state, 'tenant') else None
