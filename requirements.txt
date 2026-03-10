@@ -1,0 +1,17 @@
+fastapi
+starlette
+loguru
+python-dotenv
+google-genai
+aiohttp
+uvicorn
+SQLAlchemy
+alembic
+psycopg2-binary
+redis
+python-multipart
+faker
+email-validator
+gunicorn
+
+# python -m pip install --upgrade --no-cache-dir -r requirements.txt
