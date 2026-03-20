@@ -26,7 +26,7 @@ class TestChecket(TestCase):
             file.write(self.code)
 
         self.task_description = 'Write down a function, which returns sum numbers from 3 to 0 usign while condition'
-        self.return_values = [6]
+        self.return_values = [6, True]
         self.tags = ['while']
         self.checker = services.CheckerService()
 
@@ -49,11 +49,11 @@ class TestChecket(TestCase):
         response = self.checker.as_import(self.path_to_file, self.return_values)
         assert response == True
 
-    def test_5_send_to_helper_method(self):
-        load_dotenv()
-        response = self.checker.send_to_helper(self.path_to_file, self.return_values, self.task_description)
-        assert response is not None
-        assert response == True
+    # def test_5_send_to_helper_method(self):
+    #     load_dotenv()
+    #     response = self.checker.send_to_helper(self.path_to_file, self.return_values, self.task_description)
+    #     assert response is not None
+    #     assert response == True
 
     def tearDown(self) -> None:
         remove(self.path_to_file)

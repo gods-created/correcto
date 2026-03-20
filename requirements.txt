@@ -13,5 +13,9 @@ python-multipart
 faker
 email-validator
 gunicorn
+click
+pandas
+cryptography
+pyjwt
 
 # python -m pip install --upgrade --no-cache-dir -r requirements.txt

@@ -11,17 +11,20 @@ from models import (
     Tenant as TenantModel,
     Task as TaskModel,
     User as UserModel,
-    Solution as SolutionModel
+    Solution as SolutionModel,
+    Admin as AdminModel
 )
 from loguru import logger
 from typing import Optional, List
 from json import dumps
 from starlette.datastructures import UploadFile as StarletteUploadFile
 from os.path import join, exists
-from os import remove
+from os import getenv, remove
 from string import ascii_letters, digits
 from random import choice
 from services import CheckerService
+from cryptography.fernet import Fernet
+from jwt import encode, decode
 
 class BaseSerializer(ABC):
     db_session = None
@@ -543,4 +546,133 @@ class SolutionSerializer(BaseSerializer):
         except Exception as e:
             response['err_description'] = str(e)
 
+        return response
+
+class AdminSerializer(BaseSerializer):
+    def __init__(self, data: dict, *args, **kwargs):
+        super().__init__(data, *args, **kwargs)
+        self.secret_key = getenv('APP_SECRET_KEY', 'c1R5b2JqZkR3U2tQb1ZyTnVYd1ZsZ2pYb3p5dGx3a2pHcQ==')
+        self.cipher_suite = Fernet(self.secret_key)
+
+    def sign_in(self) -> dict:
+        response = {}
+        try:
+            self.db_connect()
+            if not self.db_session:
+                raise Exception('Connection with DB is refused')
+            
+            email, password = (
+                self.data.get('email'),
+                self.data.get('password'),
+            )
+            
+            stmt = select(AdminModel).filter_by(email=email)
+            rows = self.db_session.execute(stmt).one_or_none()
+            if not rows:
+                raise Exception('Admin doesn\'t exist')
+            
+            admin, *_ = rows
+            plain_password = self.cipher_suite.decrypt(admin.password).decode('utf-8')
+            if not password == plain_password:
+                raise Exception('Incorrect password')
+            
+            payload = admin.to_json()
+            payload.update({'password': password})
+            token = encode(payload, self.secret_key, algorithm='HS256')
+            response['token'] = token
+
+        except Exception as e:
+            response['err_description'] = str(e)
+
+        return response
+        
+    def sign_up(self) -> dict:
+        response = {}
+
+        try:
+            self.db_connect()
+
+            if not self.db_session:
+                raise Exception('Connection with DB is refused')
+            
+            email, password = (
+                self.data.get('email'),
+                self.data.get('password'),
+            )
+            encoded_password = self.cipher_suite \
+                .encrypt(
+                    password.encode('utf-8')
+                )
+            admin = AdminModel(email=email, password=encoded_password.decode('utf-8'))
+            self.db_session.add(admin)
+            self.db_session.commit()
+            response['admin'] = admin.to_json()
+
+        except ValueError as e:
+            response['err_description'] = str(e)
+
+        except IntegrityError as e:
+            e = str(e)
+            if 'UNIQUE constraint failed' in e:
+                response['err_description'] = 'The similar admin is already existing'
+
+            if 'NOT NULL constraint failed' in e:
+                response['err_description'] = 'Constraint for operation due to invalid field'
+
+        except InterfaceError as e:
+            response['err_description'] = 'Unsupported type one of the fields'
+
+        except Exception as e:
+            response['err_description'] = str(e)
+
+        return response
+    
+    def delete(self) -> dict:
+        try:
+            self.db_connect()
+
+            if not self.db_session:
+                raise Exception('Connection with DB is refused')
+            
+            admin = delete(AdminModel).where(AdminModel.email == self.data['email'])
+            self.db_session.execute(admin)
+            self.db_session.commit()
+
+        except Exception as e:
+            logger.error(f'{e.__class__.__name__}: {str(e)}')
+
+        return {}
+    
+    def check_token(self) -> dict:
+        response = {'err_description': '', 'access': False}
+
+        try:
+            self.db_connect()
+
+            if not self.db_session:
+                raise Exception('Connection with DB is refused')
+            
+            token = self.data.get('token')
+            if not token:
+                raise Exception('Invalid token')
+            
+            payload = decode(token, self.secret_key, algorithms=['HS256'])
+            email, password = (
+                payload.get('email'),
+                payload.get('password')
+            )
+
+            if not all((email, password)):
+                raise Exception('Invalid parameters encoded in the token')
+            
+            self.data['email'], self.data['password'] = email, password
+            auth_response = self.sign_in()
+            if 'err_description' in auth_response:
+                raise Exception(auth_response['err_description'])
+            
+            response['access'] = True
+
+        except Exception as e:
+            response['err_description'] = str(e)
+        
         return response

@@ -23,6 +23,27 @@ class Tenant(Base):
 class PythonTenantBase(DeclarativeBase):
     pass
 
+class Admin(PythonTenantBase):
+    __tablename__ = 'admins'
+
+    id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True)
+    email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
+    password: Mapped[str] = mapped_column(String(150), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now())
+
+    __table_args__ = (
+        Index('email_idx', 'email'),
+        Index('email_&_password_idx', 'email', 'password')
+    )
+
+    def to_json(self) -> dict:
+        return {
+            'id': self.id,
+            'email': self.email,
+            'password': self.password,
+            'created_at': self.created_at.strftime('%d.%m.%Y, %H:%M')
+        }
+
 class User(PythonTenantBase):
     __tablename__ = 'users'
 

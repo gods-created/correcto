@@ -49,6 +49,22 @@ class Checker(NodeVisitor):
     def _open_file(self, path_to_file: str) -> str:
         with open(path_to_file, mode='r') as file: 
             return file.read()
+        
+    def _validated_returns(self, return_values: List[Any]) -> List[Any]:
+        simple_types = (int, bool, float, str, bytes, bytearray)
+
+        validated = []
+        for value in return_values:
+            if isinstance(value, simple_types):
+                validated.append(value)
+                continue
+
+            try:
+                validated.append(literal_eval(value))
+            except (ValueError, SyntaxError, TypeError):
+                pass
+
+        return validated
 
     def create_node(self, path_to_file: str) -> Optional[Any]:
         try:
@@ -66,7 +82,7 @@ class Checker(NodeVisitor):
             logger.error(f'{e.__class__.__name__}: {str(e)}')
 
         return None
-    
+
     def run_process(self, path_to_file: str, return_values: List[Any]) -> Optional[bool]:
         try:
             self._validate_path_to_file(path_to_file)
@@ -83,7 +99,7 @@ class Checker(NodeVisitor):
             
             logger.debug(f'Solution was running during to subprocess')
 
-            if not literal_eval(result.stdout) in return_values:
+            if not literal_eval(result.stdout) in self._validated_returns(return_values):
                 return False 
             
             return True
@@ -118,7 +134,7 @@ class Checker(NodeVisitor):
                     continue
                 
                 return_value = obj()
-                if return_value in return_values:
+                if return_value in self._validated_returns(return_values):
                     response = True 
                     break
             

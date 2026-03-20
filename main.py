@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import Response, JSONResponse, HTMLResponse
 from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException 
-from middlewares import InterceptIPMiddleware, TenantMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from middlewares import InterceptIPMiddleware, TenantMiddleware, Error500Middleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from uvicorn import run
 from dotenv import load_dotenv
@@ -20,6 +21,13 @@ correcto = FastAPI(
     redoc=None,
 )
 
+correcto.add_middleware(Error500Middleware)
+correcto.add_middleware(
+    CORSMiddleware,
+    allow_headers=['*'],
+    allow_methods=['*'],
+    allow_origins=['*']
+)
 correcto.add_middleware(InterceptIPMiddleware)
 correcto.add_middleware(TenantMiddleware)
 
