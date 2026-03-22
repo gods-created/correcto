@@ -551,7 +551,7 @@ class SolutionSerializer(BaseSerializer):
 class AdminSerializer(BaseSerializer):
     def __init__(self, data: dict, *args, **kwargs):
         super().__init__(data, *args, **kwargs)
-        self.secret_key = getenv('APP_SECRET_KEY', 'c1R5b2JqZkR3U2tQb1ZyTnVYd1ZsZ2pYb3p5dGx3a2pHcQ==')
+        self.secret_key = getenv('APP_SECRET_KEY')
         self.cipher_suite = Fernet(self.secret_key)
 
     def sign_in(self) -> dict:
