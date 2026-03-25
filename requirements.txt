@@ -17,5 +17,6 @@ click
 pandas
 cryptography
 pyjwt
+requests
 
 # python -m pip install --upgrade --no-cache-dir -r requirements.txt

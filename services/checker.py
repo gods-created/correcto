@@ -94,13 +94,18 @@ class Checker(NodeVisitor):
                 check=True
             )
 
-            if not result.stdout:
-                return None
+            output = result.stdout.strip()
+            validated_returns = self._validated_returns(return_values)
+
+            try:
+                parsed = literal_eval(output)
+                if not parsed in validated_returns:
+                    return False 
+                
+            except:
+                pass
             
             logger.debug(f'Solution was running during to subprocess')
-
-            if not literal_eval(result.stdout) in self._validated_returns(return_values):
-                return False 
             
             return True
 
@@ -125,7 +130,7 @@ class Checker(NodeVisitor):
             self._validate_path_to_file(path_to_file)
             
             namespace = {}
-
+  
             with open(path_to_file, mode='r') as f:
                 exec(f.read(), namespace)
 

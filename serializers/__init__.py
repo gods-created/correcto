@@ -354,11 +354,15 @@ class SolutionSerializer(BaseSerializer):
         if not filename.endswith('.py'):
             raise ValueError('Incorrect file extension. Accepting only PY files')
 
-        full_path = join(self._solution_store, filename)
-        if exists(full_path):
-            file.filename = self._rename_filename(filename)
-            return self._create_file(file)
-        
+        while True:
+            full_path = join(self._solution_store, filename)
+
+            if not exists(full_path):
+                break
+
+            filename = self._rename_filename(filename)
+
+        file.file.seek(0)
         content = file.file.read()
         with open(full_path, mode='wb') as f:
             f.write(content)
@@ -369,11 +373,9 @@ class SolutionSerializer(BaseSerializer):
         error = None 
 
         try:
-            stmt = (
-                update(SolutionModel) \
+            stmt = update(SolutionModel) \
                 .where(SolutionModel.id == int(self.data.get('id'))) \
-                .values(mark=mark),
-            )
+                .values(mark=mark)
             
             self.db_session.execute(stmt)
             self.db_session.commit()
@@ -402,6 +404,7 @@ class SolutionSerializer(BaseSerializer):
             self.db_connect()
             if not self.db_session:
                 raise Exception('Connection with DB is refused')
+            
             stmt = select(SolutionModel)
 
             solution_id, user_id, task_id = (
@@ -411,13 +414,13 @@ class SolutionSerializer(BaseSerializer):
             )
 
             if solution_id is not None and solution_id.isdigit():
-                stmt.where(SolutionModel.id == int(solution_id))
+                stmt = stmt.where(SolutionModel.id == int(solution_id))
             
             if user_id is not None and user_id.isdigit():
-                stmt.where(SolutionModel.user_id == int(user_id))
+                stmt = stmt.where(SolutionModel.user_id == int(user_id))
             
             if task_id is not None and task_id.isdigit():
-                stmt.where(SolutionModel.task_id == int(task_id))
+                stmt = stmt.where(SolutionModel.task_id == int(task_id))
 
             for user in self.db_session.scalars(stmt):
                 solutions.append(user.to_json())
@@ -509,12 +512,13 @@ class SolutionSerializer(BaseSerializer):
                 raise Exception('Solution didn\'t find')
             
             solution = solutions[0]
+
             filename = solution.get('filename')
             if not filename or not exists(filename):
                 raise Exception('File with solution didn\'t find')
             
             task = solution.get('task', {})
-            
+
             task_description, tags, return_values = (
                 task.get('task_description'),
                 task.get('tags'),
@@ -534,14 +538,15 @@ class SolutionSerializer(BaseSerializer):
             checker_args = filename, return_values,
             if (result := checker.run_process(*checker_args)) is None:
                 result = checker.as_import(*checker_args)
-            
+
             if result is None:
                 result = checker.send_to_helper(*checker_args, task_description)
 
             if isinstance(result, bool) and result == False:
                 mark -= 0.5
 
-            response['solution'] = solution.update({'mark': result})
+            solution['mark'] = mark
+            response['solution'] = solution
             
         except Exception as e:
             response['err_description'] = str(e)

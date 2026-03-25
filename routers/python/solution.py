@@ -93,7 +93,7 @@ def delete_solution(id: str) -> JSONResponse:
         status_code=status.HTTP_200_OK
     )
 
-@router.post(path='/check/{id}', response_class=JSONResponse)
+@router.get(path='/check/{id}', response_class=JSONResponse)
 def check_solution(id: str):
     serializer = SolutionSerializer(
         data={'id': id},

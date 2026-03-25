@@ -70,7 +70,7 @@ class TestSolutionRouter(TestCase):
         assert response['err_description'] == 'Solution didn\'t find'
 
     def test_5_check_route(self):
-        request = self.client.post(
+        request = self.client.get(
             url='/check/0'
         )
         status = request.status_code

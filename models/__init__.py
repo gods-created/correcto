@@ -92,7 +92,6 @@ class Solution(PythonTenantBase):
             'mark': self.mark,
             'user_id': self.user_id,
             'task_id': self.task_id,
-            'user': self.user.to_json(),
             'task': self.task.to_json(),
             'created_at': self.created_at.strftime('%d.%m.%Y, %H:%M')
         }
@@ -119,7 +118,6 @@ class Task(PythonTenantBase):
             'task_description': self.task_description,
             'tags': loads(self.tags),
             'return_values': loads(self.return_values),
-            'solutions': [solution.to_json() for solution in self.solutions],
             'created_at': self.created_at.strftime('%d.%m.%Y, %H:%M')
         }
     
