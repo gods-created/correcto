@@ -4,7 +4,7 @@ from subprocess import run, CalledProcessError
 from os.path import exists
 from loguru import logger
 from google import genai
-from google.genai.errors import ClientError
+from google.genai.errors import ClientError, ServerError
 from os import getenv
 
 class BaseDescriptor:
@@ -87,27 +87,34 @@ class Checker(NodeVisitor):
         try:
             self._validate_path_to_file(path_to_file)
             
-            result = run(
-                ['python3.12', path_to_file],
-                capture_output=True,
-                text=True,
-                check=True
-            )
+            try:
+                result = run(
+                    ['python3.12', path_to_file],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+            
+            except TimeoutError as e:
+                Exception(e.strerror)
 
-            output = result.stdout.strip()
+            output = result.stdout.strip() or None
             validated_returns = self._validated_returns(return_values)
 
+            process_response = False
+
             try:
-                parsed = literal_eval(output)
-                if not parsed in validated_returns:
-                    return False 
-                
+                output = literal_eval(output) if output is not None else output
+
             except:
-                pass
-            
-            logger.debug(f'Solution was running during to subprocess')
-            
-            return True
+                pass 
+
+            if output in validated_returns:
+                process_response = True 
+
+            logger.info(f'Solution was running due to subprocess')
+
+            return process_response
 
         except ValueError as e:
             logger.error(f'ValueError: {str(e)}')
@@ -138,14 +145,22 @@ class Checker(NodeVisitor):
                 if not callable(obj):
                     continue
                 
-                return_value = obj()
+                logger.debug(f'Callable object name is \'{obj_name}\'')
+
+                try:
+                    return_value = obj()
+                
+                except TimeoutError as e:
+                    logger.error(e.strerror)
+                    continue
+                
                 if return_value in self._validated_returns(return_values):
                     response = True 
                     break
             
             namespace.clear()
 
-            logger.debug(f'Solution was running through import')
+            logger.info(f'Solution was running through import')
             
             return response
         
@@ -214,10 +229,11 @@ class Checker(NodeVisitor):
                 }
             )
             output = response.text
+            
             if not output or not output.isdigit():
                 return self.send_to_helper(path_to_file, return_values, task_description) 
             
-            logger.debug(f'Solution was checking using Gemini')
+            logger.info(f'Solution was checking using Gemini')
             return True if output == '1' else False
 
         except ValueError as e:
@@ -229,15 +245,22 @@ class Checker(NodeVisitor):
         except ClientError as e:
             logger.error(f'ClientError: {e.message}')
 
+        except ServerError as e:
+            logger.error(f'ServerError: {e.message}')
+
         except Exception as e:
             logger.error(f'{e.__class__.__name__}: {str(e)}')
 
         return None
     
-    def visiter(self, node: Any, tags: List[str]) -> bool:
+    def visiter(self, node: Any, tags: Optional[List[str]] = None) -> Optional[bool]:
         response = False 
 
+        if tags is None:
+            return None
+
         for tag in tags:
+            tag = tag.lower()
             schema = self._visit_schema.get(tag, [])
             if not schema or len(schema) != 2:
                 continue

@@ -1,8 +1,9 @@
-from routers import python_routers
-
 TENANTS = {
     'python': {
-        'routers': python_routers,
         'db_url': 'sqlite:///databases/python.sqlite'
     }
 }
+
+TITLE = 'Correcto API'
+VERSION = '0.0.1'
+DESCRIPTION = 'Correcto API general requests'

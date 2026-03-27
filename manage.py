@@ -14,6 +14,5 @@ def create_tasks(filename: Optional[str] = None) -> None:
     
     create_tasks_command(filename)
 
-
 if __name__ == '__main__':
     cli()

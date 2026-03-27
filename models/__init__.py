@@ -74,6 +74,7 @@ class Solution(PythonTenantBase):
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True)
     filename: Mapped[str] = mapped_column(String(150), nullable=False, unique=False)
     mark: Mapped[float] = mapped_column(nullable=True, default=0.0)
+    checked: Mapped[bool] = mapped_column(nullable=False, default=False)
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
     task_id: Mapped[int] = mapped_column(ForeignKey('tasks.id'))
     user: Mapped['User'] = relationship(back_populates='solutions')
@@ -90,6 +91,7 @@ class Solution(PythonTenantBase):
             'id': self.id,
             'filename': self.filename,
             'mark': self.mark,
+            'checked': self.checked,
             'user_id': self.user_id,
             'task_id': self.task_id,
             'task': self.task.to_json(),

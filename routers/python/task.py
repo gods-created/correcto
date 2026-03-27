@@ -5,10 +5,11 @@ from pydantic import BaseModel
 from typing import List, Any, Optional
 from json import loads
 from services import get_db_url_service
+from decorators import if_tenant_exists
 
 router = APIRouter(
     prefix='/tasks',
-    tags=['PYTHON', 'TASK'],
+    tags=['PYTHON', 'PYTHON-TASK'],
     default_response_class=JSONResponse,
 )
 
@@ -17,7 +18,9 @@ class TaskSchema(BaseModel):
     tags: Optional[List[str]] = None
     return_values: Optional[List[Any]] = None
 
+
 @router.get(path='', response_class=JSONResponse)
+@if_tenant_exists
 def get_tasks(request: Request) -> JSONResponse:
     content = {'tasks': []}
     query_params = request.query_params
@@ -35,7 +38,8 @@ def get_tasks(request: Request) -> JSONResponse:
     )
 
 @router.post(path='', response_class=JSONResponse)
-def create_task(task: TaskSchema) -> JSONResponse:
+@if_tenant_exists
+def create_task(request: Request, task: TaskSchema) -> JSONResponse:
     response = {}
     serializer = TaskSerializer(
         data=loads(task.model_dump_json(indent=2)),
@@ -50,7 +54,9 @@ def create_task(task: TaskSchema) -> JSONResponse:
     )
 
 @router.put(path='/{id}', response_class=JSONResponse)
+@if_tenant_exists
 def update_task(
+    request: Request,
     id: str, 
     task: TaskSchema
 ) -> JSONResponse:
@@ -71,6 +77,7 @@ def update_task(
     )
 
 @router.delete(path='/{id}', response_class=JSONResponse)
+@if_tenant_exists
 def delete_task(id: str, request: Request) -> JSONResponse:
     serializer = TaskSerializer(
         data={'id': id},

@@ -49,11 +49,11 @@ class TestChecket(TestCase):
         response = self.checker.as_import(self.path_to_file, self.return_values)
         assert response == True
 
-    # def test_5_send_to_helper_method(self):
-    #     load_dotenv()
-    #     response = self.checker.send_to_helper(self.path_to_file, self.return_values, self.task_description)
-    #     assert response is not None
-    #     assert response == True
+    def test_5_send_to_helper_method(self):
+        load_dotenv()
+        response = self.checker.send_to_helper(self.path_to_file, self.return_values, self.task_description)
+        assert response is not None
+        assert isinstance(response, bool)
 
     def tearDown(self) -> None:
         remove(self.path_to_file)

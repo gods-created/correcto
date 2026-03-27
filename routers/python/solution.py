@@ -1,16 +1,23 @@
-from fastapi import APIRouter, Request, status, UploadFile, File, Form
+from fastapi import APIRouter, Request, status, UploadFile, File, Form, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from serializers import SolutionSerializer, TaskSerializer, UserSerializer
-from services import get_db_url_service, CheckerService
+from services import get_db_url_service
+from decorators import if_tenant_exists
+from tasks import check_solution_task
+from json import dumps
+from consumers import SolutionConsumer
 
+
+consumer = SolutionConsumer()
 router = APIRouter(
     prefix='/solutions',
-    tags=['PYTHON', 'SOLUTION'],
+    tags=['PYTHON', 'PYTHON-SOLUTION'],
     default_response_class=JSONResponse
 )
 
 @router.get('', response_class=JSONResponse)
+@if_tenant_exists
 def get_solutions(request: Request):
     query_params = request.query_params
 
@@ -33,7 +40,9 @@ def get_solutions(request: Request):
     )
 
 @router.post(path='', response_class=JSONResponse)
+@if_tenant_exists
 def create_solution(
+    request: Request,
     user_id: str = Form(...),
     task_id: str = Form(...), 
     file:  UploadFile = File(...)
@@ -80,7 +89,8 @@ def create_solution(
     )
 
 @router.delete(path='/{id}', response_class=JSONResponse)
-def delete_solution(id: str) -> JSONResponse:
+@if_tenant_exists
+def delete_solution(request: Request, id: str) -> JSONResponse:
     serializer = SolutionSerializer(
         data={'id': id},
         db_url=get_db_url_service('python')
@@ -94,16 +104,27 @@ def delete_solution(id: str) -> JSONResponse:
     )
 
 @router.get(path='/check/{id}', response_class=JSONResponse)
-def check_solution(id: str):
-    serializer = SolutionSerializer(
-        data={'id': id},
-        db_url=get_db_url_service('python')
+@if_tenant_exists
+async def check_solution(id: str, request: Request, background_tasks: BackgroundTasks):
+    background_task = BackgroundTasks()
+    background_task.add_task(
+        check_solution_task,
+        id,
     )
-
-    checker = CheckerService()
-    response = serializer.check(checker=checker)
 
     return JSONResponse(
-        content=response,
-        status_code=status.HTTP_200_OK if not 'err_description' in response else status.HTTP_422_UNPROCESSABLE_CONTENT
+        content={},
+        status_code=status.HTTP_200_OK
     )
+
+@router.websocket(path='/ws')
+async def ws_check_solution(websocket: WebSocket):
+    await consumer.connect(websocket)
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            await consumer.send_personal_message(dumps(data), websocket)
+
+    except WebSocketDisconnect:
+        consumer.disconnect(websocket)

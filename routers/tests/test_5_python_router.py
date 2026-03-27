@@ -20,7 +20,7 @@ class TestPythonRouter(TestCase):
         cls.task = {
             'task_description': faker.text(),
             'tags': ['while'],
-            'return_values': [None]
+            'return_values': ['10\n9\n8\n7\n6\n5\n4\n3\n2\n1', None]
         }
 
         cls.file_name = 'test.py'
@@ -116,7 +116,6 @@ class TestPythonRouter(TestCase):
 
         solution = json_response['solution']
         assert 'mark' in solution
-
         mark = solution['mark']
         assert mark == 1.0
 

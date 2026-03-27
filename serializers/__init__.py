@@ -25,6 +25,7 @@ from random import choice
 from services import CheckerService
 from cryptography.fernet import Fernet
 from jwt import encode, decode
+from configs import TENANTS
 
 class BaseSerializer(ABC):
     db_session = None
@@ -72,6 +73,10 @@ class TenantSerializer(BaseSerializer):
         try:
             data = self.data
             tenant = data.get('tenant')
+            
+            if not tenant or not tenant in TENANTS:
+                return False
+            
             stmt = select(TenantModel).where(TenantModel.domain == tenant)
             for item in self.db_session.scalars(stmt):
                 if item is not None:
@@ -375,7 +380,7 @@ class SolutionSerializer(BaseSerializer):
         try:
             stmt = update(SolutionModel) \
                 .where(SolutionModel.id == int(self.data.get('id'))) \
-                .values(mark=mark)
+                .values(mark=mark, checked=True)
             
             self.db_session.execute(stmt)
             self.db_session.commit()
@@ -527,14 +532,10 @@ class SolutionSerializer(BaseSerializer):
 
             mark = 1
             node = checker.create_node(filename)
-            if tags:
-                if not checker.visiter(node, tags):
+
+            if (visiter := checker.visiter(node, tags)) is not None and visiter == False:
                     mark -= 0.5
 
-            result = self._update_mark(mark)
-            if isinstance(result, str):
-                raise Exception(result)
-            
             checker_args = filename, return_values,
             if (result := checker.run_process(*checker_args)) is None:
                 result = checker.as_import(*checker_args)
@@ -545,6 +546,7 @@ class SolutionSerializer(BaseSerializer):
             if isinstance(result, bool) and result == False:
                 mark -= 0.5
 
+            self._update_mark(mark)
             solution['mark'] = mark
             response['solution'] = solution
             

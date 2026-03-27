@@ -1,26 +1,28 @@
 from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
 from serializers import AdminSerializer
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, field_validator
 from json import loads
 from services import get_db_url_service
 from typing import Optional
+from decorators import if_tenant_exists
+from validators import email as email_validator
 
 router = APIRouter(
     prefix='/admins',
-    tags=['PYTHON', 'ADMIN'],
+    tags=['PYTHON', 'PYTHON-ADMIN'],
     default_response_class=JSONResponse
 )
      
 class AdminSchema(BaseModel):
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     password: Optional[str] = None
 
     @field_validator('email')
     @classmethod
     def validate_email(cls, email: str) -> str:
-        if not email:
-            raise ValueError('Email can\'t to be empty')
+        if not email_validator(email):
+            raise ValueError('Invalid email address')
 
         if email and len(email) > 150:
             raise ValueError('Email mustn\'t have more than 150 characters')
@@ -39,7 +41,8 @@ class AdminSchema(BaseModel):
         return password
 
 @router.post('/sign_in', response_class=JSONResponse)
-def sign_in(admin: AdminSchema) -> JSONResponse:
+@if_tenant_exists
+def sign_in(admin: AdminSchema, request: Request) -> JSONResponse:
     serializer = AdminSerializer(
         data=loads(admin.model_dump_json(indent=2)),
         db_url=get_db_url_service('python')
@@ -53,7 +56,8 @@ def sign_in(admin: AdminSchema) -> JSONResponse:
     )
 
 @router.post('/sign_up', response_class=JSONResponse)
-def sign_up(admin: AdminSchema) -> JSONResponse:
+@if_tenant_exists
+def sign_up(admin: AdminSchema, request: Request) -> JSONResponse:
     serializer = AdminSerializer(
         data=loads(admin.model_dump_json(indent=2)),
         db_url=get_db_url_service('python')
@@ -68,6 +72,7 @@ def sign_up(admin: AdminSchema) -> JSONResponse:
     )
 
 @router.delete('/delete/{email}', response_class=JSONResponse)
+@if_tenant_exists
 def delete_admin(email: str, request: Request) -> JSONResponse:
     serializer = AdminSerializer(
         data={'email': email},
@@ -82,7 +87,8 @@ def delete_admin(email: str, request: Request) -> JSONResponse:
     )
 
 @router.get('/check_token/{token}', response_class=JSONResponse)
-def check_token(token: str) -> JSONResponse:
+@if_tenant_exists
+def check_token(token: str, request: Request) -> JSONResponse:
     serializer = AdminSerializer(
         data={'token': token},
         db_url=get_db_url_service('python')

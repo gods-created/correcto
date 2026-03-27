@@ -18,5 +18,7 @@ pandas
 cryptography
 pyjwt
 requests
+validators
+websockets
 
 # python -m pip install --upgrade --no-cache-dir -r requirements.txt
