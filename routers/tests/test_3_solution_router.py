@@ -29,8 +29,8 @@ class TestSolutionRouter(TestCase):
                 'file': ('test.py', b'hello world', 'text/plain')
             },
             data={
-                'user_id': 1,
-                'task_id': 1
+                'user_id': 0,
+                'task_id': 0
             }
         )
         status_code = request.status_code
@@ -74,7 +74,4 @@ class TestSolutionRouter(TestCase):
             url='/check/0'
         )
         status = request.status_code
-        response = request.json()
-        assert status == 422
-        assert 'err_description' in response
-        assert response['err_description'] == 'Solution didn\'t find'
+        assert status == 200

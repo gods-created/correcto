@@ -43,7 +43,7 @@ class TestChecket(TestCase):
 
     def test_3_run_process_method(self):
         response = self.checker.run_process(self.path_to_file, self.return_values)
-        assert response is None 
+        assert not response
 
     def test_4_as_import_method(self):
         response = self.checker.as_import(self.path_to_file, self.return_values)

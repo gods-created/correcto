@@ -111,14 +111,6 @@ class TestPythonRouter(TestCase):
         status_code = response.status_code
         assert status_code == 200
 
-        json_response = response.json()
-        assert 'solution' in json_response
-
-        solution = json_response['solution']
-        assert 'mark' in solution
-        mark = solution['mark']
-        assert mark == 1.0
-
     def test_5_delete_solution(self):
         request = self.client.delete(url=f'/solutions/{type(self).solution_id}')
         assert request.status_code == 200

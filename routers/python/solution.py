@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, status, UploadFile, File, Form, BackgroundTasks, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response, FileResponse
 from fastapi.exceptions import RequestValidationError
 from serializers import SolutionSerializer, TaskSerializer, UserSerializer
 from services import get_db_url_service
@@ -7,7 +7,8 @@ from decorators import if_tenant_exists
 from tasks import check_solution_task
 from json import dumps
 from consumers import SolutionConsumer
-
+from typing import Optional
+from os.path import exists
 
 consumer = SolutionConsumer()
 router = APIRouter(
@@ -106,15 +107,29 @@ def delete_solution(request: Request, id: str) -> JSONResponse:
 @router.get(path='/check/{id}', response_class=JSONResponse)
 @if_tenant_exists
 async def check_solution(id: str, request: Request, background_tasks: BackgroundTasks):
-    background_task = BackgroundTasks()
-    background_task.add_task(
+    background_tasks.add_task(
         check_solution_task,
-        id,
+        id=id,
     )
 
     return JSONResponse(
         content={},
         status_code=status.HTTP_200_OK
+    )
+
+@router.get(path='/download', response_class=FileResponse)
+@if_tenant_exists
+async def download_solution(request: Request, path: Optional[str] = None):
+    if (not path or not exists(path)):
+        return Response(
+            content='File didn\'t find',
+            status_code=status.HTTP_502_BAD_GATEWAY
+        )
+
+    return FileResponse(
+        path=path,
+        media_type='application/octet-stream',
+        filename=path.split('/')[-1]
     )
 
 @router.websocket(path='/ws')
@@ -124,7 +139,8 @@ async def ws_check_solution(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_json()
-            await consumer.send_personal_message(dumps(data), websocket)
+            await consumer.broadcast(dumps(data))
+            # await consumer.send_personal_message(dumps(data), websocket)
 
     except WebSocketDisconnect:
         consumer.disconnect(websocket)

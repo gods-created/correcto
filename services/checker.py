@@ -51,18 +51,13 @@ class Checker(NodeVisitor):
             return file.read()
         
     def _validated_returns(self, return_values: List[Any]) -> List[Any]:
-        simple_types = (int, bool, float, str, bytes, bytearray)
-
         validated = []
         for value in return_values:
-            if isinstance(value, simple_types):
-                validated.append(value)
-                continue
-
             try:
                 validated.append(literal_eval(value))
             except (ValueError, SyntaxError, TypeError):
-                pass
+                if isinstance(value, str): value = value.replace(' ', '')
+                validated.append(value)
 
         return validated
 
@@ -98,9 +93,11 @@ class Checker(NodeVisitor):
             except TimeoutError as e:
                 Exception(e.strerror)
 
-            output = result.stdout.strip() or None
+            output = result.stdout \
+                .replace('\n', ',') \
+                .replace(' ', '') or None
+            
             validated_returns = self._validated_returns(return_values)
-
             process_response = False
 
             try:
@@ -108,7 +105,7 @@ class Checker(NodeVisitor):
 
             except:
                 pass 
-
+            
             if output in validated_returns:
                 process_response = True 
 

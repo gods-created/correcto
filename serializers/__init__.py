@@ -349,6 +349,10 @@ class SolutionSerializer(BaseSerializer):
         super().__init__(data, *args, **kwargs)
         self._solution_store = './assets/solutions'
 
+    @property
+    def solution_store(self):
+        return self._solution_store 
+
     def _rename_filename(self, filename: str) -> str:
         prefix = ''.join(choice(ascii_letters + digits) for _ in range(4))
         return f'{prefix}_{filename}'

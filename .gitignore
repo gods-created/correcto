@@ -6,3 +6,4 @@ alembic.ini
 alembic/
 stack.yml
 .dockerignore
+*/solutions/*
