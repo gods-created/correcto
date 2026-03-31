@@ -431,8 +431,8 @@ class SolutionSerializer(BaseSerializer):
             if task_id is not None and task_id.isdigit():
                 stmt = stmt.where(SolutionModel.task_id == int(task_id))
 
-            for user in self.db_session.scalars(stmt):
-                solutions.append(user.to_json())
+            for solution in self.db_session.scalars(stmt):
+                solutions.append(solution.to_json())
 
         except Exception as e:
             logger.error(f'{e.__class__.__name__}: {str(e)}')
@@ -497,6 +497,7 @@ class SolutionSerializer(BaseSerializer):
                 raise Exception('Solution didn\'t find')
             
             solution = solutions[0]
+            solution_id = solution.get('id')
             filename = solution.get('filename')
             if filename and exists(filename):
                 remove(filename)
@@ -505,7 +506,7 @@ class SolutionSerializer(BaseSerializer):
                 raise Exception('Connection with DB is refused')
             
             stmt = delete(SolutionModel)
-            stmt = stmt.where(SolutionModel.id == int(self.data.get('id')))
+            stmt = stmt.where(SolutionModel.id == solution_id)
             self.db_session.execute(stmt)
             self.db_session.commit()
 
@@ -527,6 +528,9 @@ class SolutionSerializer(BaseSerializer):
                 raise Exception('File with solution didn\'t find')
             
             task = solution.get('task', {})
+
+            if not task:
+                raise Exception('Task doesn\'t create')
 
             task_description, tags, return_values = (
                 task.get('task_description'),

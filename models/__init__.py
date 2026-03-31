@@ -75,10 +75,10 @@ class Solution(PythonTenantBase):
     filename: Mapped[str] = mapped_column(String(150), nullable=False, unique=False)
     mark: Mapped[float] = mapped_column(nullable=True, default=0.0)
     checked: Mapped[bool] = mapped_column(nullable=False, default=False)
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
-    task_id: Mapped[int] = mapped_column(ForeignKey('tasks.id'))
-    user: Mapped['User'] = relationship(back_populates='solutions')
-    task: Mapped['Task'] = relationship(back_populates='solutions')
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey('tasks.id', ondelete='SET NULL'), nullable=True)
+    user: Mapped['User'] = relationship(back_populates='solutions', passive_deletes=True)
+    task: Mapped['Task'] = relationship(back_populates='solutions', passive_deletes=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now())
 
     __table_args__ = (
@@ -94,7 +94,7 @@ class Solution(PythonTenantBase):
             'checked': self.checked,
             'user_id': self.user_id,
             'task_id': self.task_id,
-            'task': self.task.to_json(),
+            'task': self.task.to_json() if self.task else None,
             'created_at': self.created_at.strftime('%d.%m.%Y, %H:%M')
         }
 
